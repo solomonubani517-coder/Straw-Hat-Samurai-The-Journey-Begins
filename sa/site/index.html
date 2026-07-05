@@ -1,0 +1,812 @@
+<!doctype html>
+<!--
+   Copyright 2025 Metaversal Corporation.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+      https://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+
+   SPDX-License-Identifier: Apache-2.0
+-->
+
+<!--
+   SCENE ASSEMBLER – UI Overview
+   - 3D Viewport: The canvas (injected by sa-core.js) where you view and select objects
+   - Scene Outliner: Left sidebar (#modelList) – scene objects hierarchy
+   - Object Properties: Left sidebar (#propertiesPanel) – object stats (triangles, textures)
+   - Header: Top bar – scene settings, undo/redo, transform tools, export
+   - Transform Gizmo: Move/Rotate/Scale buttons (W/E/R)
+   - Asset Browser: Object Library panel – add objects to scene
+   - Code Editor: Edit scene as JSON
+-->
+
+<html data-bs-theme="dark">
+
+<head>
+   <meta charset="utf-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1">
+   <title>Scene Assembler</title>
+   <link rel="icon" href="favicon.svg" type="image/svg+xml">
+
+   <!-- Styles -->
+   <link rel="stylesheet" href="css/styles.css">
+
+   <!-- Bootstrap (UI framework) -->
+   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+
+   <!-- Driver.js (for Getting Started Guide) -->
+   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1.4.0/dist/driver.css">
+   <script src="https://cdn.jsdelivr.net/npm/driver.js@1.4.0/dist/driver.js.iife.js"></script>
+
+   <!-- Fonts & Icons -->
+   <link rel="preconnect" href="https://fonts.googleapis.com">
+   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap" rel="stylesheet">
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+   <!-- jQuery, Socket.io (Fabric sync) -->
+   <script type="text/javascript" src="js/vendor/jquery-3.7.1.min.js"></script>
+   <script type="text/javascript" src="js/vendor/cdn.socket.io_4.8.1_socket.io.min.js"></script>
+
+   <!-- Metaversal Fabric (multi-user, scene sync) -->
+   <script type="text/javascript" src="/js/vendor/mv/MVMF.js"></script>
+   <script type="text/javascript" src="/js/vendor/mv/MVSB.js"></script>
+   <script type="text/javascript" src="/js/vendor/mv/MVRest.js"></script>
+   <script type="text/javascript" src="/js/vendor/mv/MVXP.js"></script>
+   <script type="text/javascript" src="/js/vendor/mv/MVIO.js"></script>
+   <script type="text/javascript" src="/js/vendor/mv/MVRP.js"></script>
+   <script type="text/javascript" src="/js/vendor/mv/MVRP_Dev.js"></script>
+   <script type="text/javascript" src="/js/vendor/mv/MVRP_Fabric.js"></script>
+   <script type="text/javascript" src="/js/vendor/mv/MVRP_Map.js"></script>
+
+   <!-- App entry (Fabric integration, scene load) -->
+   <script src="js/maputil.js"></script>
+   <script src="js/rp1.js"></script>
+
+   <!-- Three.js (3D engine) -->
+   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+
+   <!-- OrbitControls = camera orbit; TransformControls = move/rotate/scale gizmo -->
+   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
+   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+   <script type="text/javascript" class="data_asp">
+      const g_pRequire = MV.MVMF.Core.Require('MVRP_Dev,MVRP_Map,MVRP_Fabric');
+      var g_pMap = null;
+
+      $(document).ready(
+         function() {
+            g_pMap = new ExtractMap($('body'), 70, 1);
+            //$('.data_asp').remove ();
+         }
+      );
+   </script>
+</head>
+
+<body>
+   <!--
+      LOGIN MODAL – Auth gate before editing.
+      Shown until user enters Fabric URL + key. Hidden when authenticated.
+   -->
+   <div class="login-modal vh-100 vw-100 bg-dark position-absolute z-3 jsLogin" style="display:none;" tabindex="-1">
+      <div class="modal-body text-center d-flex flex-column h-100 justify-content-center align-items-center">
+         <h1 class="modal-title mb-2 pe-none text-uppercase fw-lighter">Scene Assembler</h1>
+         <small class="mb-4 pe-none">Please enter your admin key to edit your scene.</small>
+         <div class="jsLogin container">
+            <form class="row g-2 justify-content-center align-items-center mb-5" onsubmit="onLogin(event)">
+               <div class="col-12 col-lg-4">
+                  <div class="form-floating">
+                     <input type="text" id="msf" name="key" class="form-control form-control-sm jsUrl" aria-describedby="Your Fabric Url" placeholder="Your Fabric Url" autocomplete="current-password" required>
+                     <label for="msf"><i class="fa-solid fa-file-code"></i> Enter your Fabric Url:</label>
+                  </div>
+               </div>
+               <div class="col-lg-12 d-none d-lg-block">
+
+               </div>
+               <div class="col-12 col-lg-4">
+                  <div class="form-floating">
+                     <input type="password" id="key" name="key" class="form-control form-control-sm jsKey" aria-describedby="Your Key" placeholder="Your Key" autocomplete="current-password" required>
+                     <label for="key"><i class="fa-solid fa-key"></i> Enter your key:</label>
+                  </div>
+               </div>
+               <div class="col-12">
+                  <button type="submit" class="btn btn-lg btn-primary my-3 rounded-5"><i class="fa-solid fa-door-open"></i> Enter</button>
+               </div>
+            </form>
+            <script>
+               function onLogin(event) {
+                  g_pMap.onLogin(event);
+               }
+            </script>
+         </div>
+      </div>
+   </div>
+
+   <!--
+      HEADER (top bar)
+      Scene list, settings (snap, canvas size), help, undo/redo, delete, camera, export, publish.
+   -->
+   <div class="ui position-absolute w-100 user-select-none pe-none z-2 jsSceneEditor" style="display:none;">
+      <nav class="main navbar navbar-expand py-1 pe-auto">
+         <div class="container-lg">
+            <ul class="navbar-nav gap-2 mb-lg-0 blur rounded-5 bg-dark bg-opacity-25 px-1">
+               <li class="nav-item my-auto">
+                  <button class="btn btn-outline-light border-0 bg-opacity-25 rounded-5" type="button" data-bs-toggle="offcanvas" data-bs-target="#sceneManagerPanel" aria-controls="sceneManagerPanel">
+                     <span class="jsCurrentScene"></span>
+                  </button>
+               </li>
+               <li class="nav-item dropdown">
+                  <button class="nav-link" id="settingsToggle" role="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                     <i class="fa-solid fa-cog" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Scene Settings"></i>
+                  </button>
+                  <ul class="dropdown-menu">
+                     <li>
+                        <div class="dropdown-item mx-auto py-2">
+                           <div class="form-check form-switch">
+                              <input class="form-check-input" type="checkbox" role="switch" id="snap">
+                              <label class="form-check-label" for="snap">Snap Objects to Grid</label>
+                           </div>
+                        </div>
+                     </li>
+                     <li>
+                        <hr class="dropdown-divider">
+                     </li>
+                     <li>
+                        <div class="px-3 py-2 d-flex align-items-end w-100 gap-2">
+                           <div class="input-group">
+                              <label for="canvasSize" class="form-label w-100 m-0 small"><i class="fa-solid fa-ruler-combined"></i> Canvas&nbsp;Size</label>
+                              <input type="text" class="form-control" id="canvasSize" placeholder="200" value="200" maxlength="3" style="width:2rem">
+                             <span class="input-group-text">m.</span>
+                           </div>
+                           <button type="submit" class="btn btn-outline-light" id="setCanvasSize">Set</button>
+                        </div>
+                     </li>
+                     <li>
+                        <hr class="dropdown-divider">
+                     </li>
+                     <li>
+                        <div class="dropdown-item mx-auto py-2">
+                           <div class="fabric-url">
+                              <label class="small" for="fabricUrl"><i class="fa-solid fa-paperclip"></i> Spatial Fabric URL</label>
+                              <div class="input-group flex-grow-1">
+                                 <input type="text" class="form-control form-control-sm" id="fabricUrl" placeholder="Publish a scene for URL" value="" readonly>
+                                 <button class="btn btn-outline-light" type="button" id="copyFabricUrl" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Copy URL" disabled>
+                                    <i class="fa-solid fa-copy"></i>
+                                 </button>
+                              </div>
+                           </div>
+                        </div>
+                     </li>
+                  </ul>
+               </li>
+               <li class="nav-item border-start my-1">
+               </li>
+               <li class="nav-item dropdown">
+                  <button class="nav-link" id="helpToggle" role="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                     <i class="fa-solid fa-graduation-cap" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Help"></i>
+                  </button>
+                  <div class="dropdown-menu p-3 text-body-secondary" id="help" style="min-width: 20rem; max-width: 100%;">
+                     <button type="button" class="btn btn-light w-100 mb-2 border-0" id="startTutorial" aria-label="Start getting started tutorial">
+                        <i class="fa-solid fa-star me-1"></i>Getting Started Tutorial
+                     </button>
+                     <hr class="dropdown-divider">
+                     <div id="hotkeys" class="small">
+                        <strong class="d-block mb-1">Hotkeys</strong>
+                        <span class="text-body-tertiary my-2">Transform</span>
+                        <div class="row gy-2 gx-3 mb-2">
+                           <div class="col-auto">
+                              <kbd>W</kbd> Move
+                           </div>
+                           <div class="col-auto">
+                              <kbd>E</kbd> Rotate
+                           </div>
+                           <div class="col-auto">
+                              <kbd>R</kbd> Scale
+                           </div>
+                        </div>
+                        <span class="text-body-tertiary my-2">Utilities</span>
+                        <div class="row gy-2 gx-3 mb-2">
+                           <div class="col-auto">
+                              <kbd>Delete</kbd> Delete
+                           </div>
+                           <div class="col-auto">
+                              <kbd>Ctrl</kbd> + <kbd>D</kbd> Duplicate
+                           </div>
+                           <div class="col-auto">
+                              <kbd>Q</kbd> Detach gizmo
+                           </div>
+                           <div class="col-auto">
+                              <kbd>Shift</kbd> + <kbd>Q</kbd> Re‑attach
+                           </div>
+                        </div>
+                        <span class="text-body-tertiary my-2">History</span>
+                        <div class="row gy-2 gx-3 mb-2">
+                           <div class="col-auto">
+                              <kbd>Ctrl</kbd> + <kbd>Z</kbd> Undo
+                           </div>
+                           <div class="col-auto">
+                              <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> Redo
+                           </div>
+                        </div>
+                        <span class="text-body-tertiary my-2">Camera</span>
+                        <div class="row gy-2 gx-3">
+                           <div class="col-auto">
+                              <kbd>F</kbd> Frame on selected objects
+                           </div>
+                           <div class="col-auto">
+                              <kbd>Space</kbd> + <kbd>Arrows</kbd> Pan
+                           </div>
+                           <div class="col-auto">
+                              <kbd>Arrows</kbd> Move
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+               </li>
+               <li class="nav-item border-start my-1">
+               <li class="nav-item d-flex" id="undoRedoGroup">
+                  <button class="nav-link" id="undo" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Undo (ctrl+z)"><i class="fa-solid fa-rotate-left"></i></button>
+                  <button class="nav-link" id="redo" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Redo (ctrl+shift+z)"><i class="fa-solid fa-rotate-right"></i></button>
+               </li>
+               <li class="nav-item border-start my-1">
+               </li>
+               <li class="nav-item">
+                  <button class="nav-link" id="delete" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Delete Selected"><i class="fa-solid fa-trash"></i></button>
+               </li>
+               <li class="nav-item">
+                  <button class="nav-link" id="resetCamera" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Reset Camera"><i class="fa-solid fa-camera"></i></button>
+               </li>
+               <li class="nav-item border-start my-1">
+               </li>
+               <li class="nav-item dropdown">
+                  <button class="nav-link" id="export" data-bs-toggle="dropdown" data-bs-auto-close="true" aria-expanded="false" data-bs-placement="bottom" title="Export JSON"><i class="fa-solid fa-file-export"></i></button>
+                  <ul class="dropdown-menu dropdown-menu-end py-2" aria-labelledby="export">
+                     <li>
+                        <button class="dropdown-item" id="exportJson" type="button">
+                           <i class="fa-solid fa-database me-2"></i><strong>Export Backup</strong>
+                           <div class="small text-muted mt-1">Preserves existing links to your database.</div>
+                        </button>
+                     </li>
+                     <li><hr class="dropdown-divider"></li>
+                     <li>
+                        <button class="dropdown-item" id="exportJsonExt" type="button">
+                           <i class="fa-solid fa-up-right-from-square me-2"></i><strong>Export for External</strong>
+                           <div class="small text-muted mt-1">For importing into new scenes or databases.</div>
+                        </button>
+                     </li>
+                  </ul>
+               </li>
+               <li class="nav-item d-flex align-items-center">
+                  <button class="nav-link jsPublish pe-3 rounded-5" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Publish Scene"><i class="fa-solid fa-cloud-arrow-up"></i></button>
+               </li>
+            </ul>
+            <button class="btn btn-sm btn-outline-secondary text-light bg-dark rounded-5" type="button" data-bs-toggle="offcanvas" data-bs-target="#codeEditorPanel" aria-controls="codeEditorPanel" data-bs-toggle="tooltip" data-bs-placement="bottom" title="View Scene JSON" id="codeToggle"><i class="fa-solid fa-code"></i> Code Editor</button>
+         </div>
+      </nav>
+      <!-- TRANSFORM TOOLBAR – Move/Rotate/Scale. Shown when object selected. -->
+      <nav class="secondary navbar navbar-expand p-0 mt-3 mt-lg-0 pe-none d-none" id="objControls">
+         <ul class="navbar-nav transforms gap-1 mb-lg-0 rounded-5 blur mx-auto pe-auto bg-dark bg-opacity-75">
+            <li class="nav-item">
+               <button class="nav-link p-3 ps-4" id="translate" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Move (W)"><i class="fa-solid fa-arrows-up-down-left-right fa-lg"></i></button>
+            </li>
+            <li class="nav-item border-start my-1">
+            </li>
+            <li class="nav-item">
+               <button class="nav-link p-3" id="rotate" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Rotate (E)"><i class="fa-solid fa-rotate fa-lg"></i></button>
+            </li>
+            <li class="nav-item border-start my-1">
+            </li>
+            <li class="nav-item">
+               <button class="nav-link p-3 pe-4" id="scale" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Scale (E)"><i class="fa-solid fa-expand fa-lg"></i></button>
+            </li>
+         </ul>
+      </nav>
+   </div>
+
+   <!--
+      SIDEBAR (left) – Outliner + Properties panels.
+      OUTLINER: #modelList – scene hierarchy, select objects, drag to group.
+      PROPERTIES: #propertiesPanel – stats (triangles, textures), efficiency tips.
+   -->
+   <div class="ui position-fixed mt-5 pt-2 ms-3 h-100 pe-none z-1 jsSceneEditor" id="sidebar" style="display:none;">
+      <div id="modelsPanel" class="card mb-3 rounded-4 bg-dark bg-opacity-75 blur pe-none user-select-none" style="width: 18rem;">
+         <div class="card-body p-0">
+            <ul class="list-group list-group-flush py-2 px-1 rounded-4 pe-auto small" id="modelList">
+            </ul>
+         </div>
+      </div>
+
+      <div class="card mb-3 rounded-4 bg-dark bg-opacity-75 blur pe-auto user-select-none" style="width: 18rem;" id="propertiesPanel">
+         <div class="card-body">
+            <h6 class="card-title pe-none user-select-none">Properties</h6>
+            <p class="card-text small mb-2" id="properties"></p>
+
+            <div class="d-flex gap-1 align-items-center mb-2">
+               <div class="badge text-bg-secondary" id="triBadge"><i class="fa-solid fa-play fa-rotate-270 fa-sm"></i> Triangles: <span id="triCount"></span></div>
+               <div id="triStats" class="btn-group dropend">
+                  <button id="triStatus" class="btn btn-sm btn-outline-secondary text-light rounded-5 p-0" type="button" name="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false"><i class="fa-solid fa-info-circle fa-lg"></i></button>
+                  <div class="stat-viewer dropdown-menu dropdown-menu-end p-3" style="width: 22rem; max-height: 80vh; overflow-y: auto;">
+                     <h6 class="pe-none user-select-none mb-2"><i class="fa-solid fa-play fa-rotate-270 fa-sm"></i> Triangle Analyzer</h6>
+                     <p class="stat-viewer-lead small mb-1 pe-none user-select-none text-muted">
+                        It's best to keep scenes under <strong><i class="fa-solid fa-play fa-rotate-270 fa-sm"></i> 200K</strong> (and 20MB). Fewer <i class="fa-solid fa-play fa-rotate-270 fa-sm"></i> = better performance.
+                     </p>
+                     <div class="tri-gauge mb-2">
+                        <div class="d-flex gap-1 justify-content-start align-items-baseline small mb-1">
+                           <span>Selected:</span>
+                           <span><i class="fa-solid fa-play fa-rotate-270 fa-sm"></i></span>
+                           <span class="fw-medium" id="triGaugeCount">0</span>
+                           <span>/</span>
+                           <span><i class="fa-solid fa-cube fa-sm"></i></span>
+                           <span class="fw-medium" id="vertCount"></span>
+                        </div>
+                        <div class="progress" role="progressbar" aria-label="Triangles vs 200K limit" aria-valuemin="0" aria-valuemax="200000" style="height: 0.5rem" id="triGaugeBar">
+                           <div class="progress-bar" id="triGaugeFill" style="width: 0%"></div>
+                        </div>
+                        <div class="stat-viewer-status small mt-1 text-start fw-medium" id="triGaugeStatus">Good</div>
+                     </div>
+                     <div class="tri-gauge mb-2">
+                        <div class="d-flex gap-1 justify-content-start align-items-baseline small mb-1">
+                           <span>Scene total:</span>
+                           <span><i class="fa-solid fa-play fa-rotate-270 fa-sm"></i></span>
+                           <span class="fw-medium" id="triSceneCount">0</span>
+                        </div>
+                        <div class="progress" role="progressbar" aria-label="Scene triangles vs 200K limit" aria-valuemin="0" aria-valuemax="200000" style="height: 0.5rem" id="triSceneGaugeBar">
+                           <div class="progress-bar" id="triSceneGaugeFill" style="width: 0%"></div>
+                        </div>
+                        <div class="stat-viewer-status small mt-1 text-start fw-medium" id="triSceneGaugeStatus">Good</div>
+                     </div>
+                     <details class="stat-viewer-details small mb-1">
+                        <summary class="text-body-secondary cursor-pointer">Efficiency tips</summary>
+                        <ul class="list-unstyled mb-0 ps-2 small text-body-secondary">
+                           <li>· Efficient scenes load faster and run better on all devices.</li>
+                           <li>· Use fewer triangles; reuse materials; unify normals; tile textures.</li>
+                           <li>· Build to real scale; group by proximity, not material; keep dense detail away from area edges.</li>
+                        </ul>
+                     </details>
+                     <details class="stat-viewer-details small">
+                        <summary class="text-body-secondary cursor-pointer">Tier specs (advanced)</summary>
+                        <p class="small text-body-secondary mt-1 mb-1">Pick the tier that fits your object size and how many can appear at once.</p>
+                        <ul class="list-unstyled mb-0 ps-2 small text-body-secondary">
+                           <li>T1: <i class="fa-solid fa-play fa-rotate-270 fa-sm"></i> 500 · <i class="fa-solid fa-image fa-sm"></i> 64×64 · <i class="fa-solid fa-shapes"></i> 200</li>
+                           <li>T2: <i class="fa-solid fa-play fa-rotate-270 fa-sm"></i> 2K · <i class="fa-solid fa-image fa-sm"></i> 128×128 · <i class="fa-solid fa-shapes"></i> 50 </li>
+                           <li>T3: <i class="fa-solid fa-play fa-rotate-270 fa-sm"></i> 10K · <i class="fa-solid fa-image fa-sm"></i> 256×256 · <i class="fa-solid fa-shapes"></i> 10</li>
+                           <li>T4: <i class="fa-solid fa-play fa-rotate-270 fa-sm"></i> 100K–150K · <i class="fa-solid fa-image fa-sm"></i> 1024×1024 · <i class="fa-solid fa-shapes"></i> 1</li>
+                           <li>T5 Solo: <i class="fa-solid fa-play fa-rotate-270 fa-sm"></i> 100K–150K · <i class="fa-solid fa-image fa-sm"></i> 2048×1024 · <i class="fa-solid fa-shapes"></i> 1</li>
+                        </ul>
+                     </details>
+                  </div>
+               </div>
+            </div>
+            <div class="d-flex gap-1 align-items-center">
+               <div class="badge text-bg-secondary" id="texBadge"><i class="fa-solid fa-image fa-sm"></i> Textures: <span id="texCount"></span></div>
+               <div id="texStats" class="btn-group dropend">
+                  <button id="texStatus" class="btn btn-sm btn-outline-secondary text-light rounded-5 p-0" type="button" name="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false"><i class="fa-solid fa-info-circle fa-lg"></i></button>
+                  <div class="stat-viewer dropdown-menu dropdown-menu-end p-3" style="width: 22rem; max-height: 80vh; overflow-y: auto;">
+                     <h6 class="pe-none user-select-none mb-2"><i class="fa-solid fa-image fa-sm"></i> Texture Analyzer</h6>
+                     <p class="stat-viewer-lead small mb-1 pe-none user-select-none text-muted">
+                        It's best to keep total scene textures under <strong>2&nbsp;MP</strong>. Less/smaller <i class="fa-solid fa-image fa-sm"></i> = smoother rendering.
+                     </p>
+                     <p class="small fw-medium mb-1 pe-none user-select-none">Textures</p>
+                     <div id="texList"></div>
+                     <div class="tex-gauge mb-2">
+                        <div class="d-flex gap-1 justify-content-start align-items-baseline small mb-1">
+                           <span>Selected:</span>
+                           <span><i class="fa-solid fa-image fa-sm"></i></span>
+                           <span id="texGaugeDims">—</span>
+                           <span>MP</span>
+                        </div>
+                        <div class="progress" role="progressbar" aria-label="Texture MP vs 2 MP limit" aria-valuemin="0" aria-valuemax="2" style="height: 0.5rem" id="texGaugeBar">
+                           <div class="progress-bar" id="texGaugeFill" style="width: 0%"></div>
+                        </div>
+                        <div class="stat-viewer-status small mt-1 text-start fw-medium" id="texGaugeStatus">Good</div>
+                     </div>
+                     <div class="tex-gauge mb-2">
+                        <div class="d-flex gap-1 justify-content-start align-items-baseline small mb-1">
+                           <span>Scene total:</span>
+                           <span><i class="fa-solid fa-image fa-sm"></i></span>
+                           <span class="fw-medium" id="texSceneCount">0</span>
+                           <span>MP</span>
+                        </div>
+                        <div class="progress" role="progressbar" aria-label="Scene texture MP vs 2 MP limit" aria-valuemin="0" aria-valuemax="2" style="height: 0.5rem" id="texSceneGaugeBar">
+                           <div class="progress-bar" id="texSceneGaugeFill" style="width: 0%"></div>
+                        </div>
+                        <div class="stat-viewer-status small mt-1 text-start fw-medium" id="texSceneGaugeStatus">Good</div>
+                     </div>
+                     <details class="stat-viewer-details small mb-1">
+                        <summary class="text-body-secondary cursor-pointer">Efficiency tips</summary>
+                        <ul class="list-unstyled mb-0 ps-2 small text-body-secondary">
+                           <li>· Reuse textures, use smaller resolutions, and tile instead of unique large images</li>
+                           <li>· Prefer single-texture materials; max 2 UV sets. PBR or alpha = higher tier.</li>
+                        </ul>
+                     </details>
+                     <details class="stat-viewer-details small">
+                        <summary class="text-body-secondary cursor-pointer">Tier specs (advanced)</summary>
+                        <p class="small text-body-secondary mt-1 mb-1">Pick the tier that fits your object size and how many can appear at once.</p>
+                        <ul class="list-unstyled mb-0 ps-2 small text-body-secondary">
+                           <li>T1: <i class="fa-solid fa-play fa-rotate-270 fa-sm"></i> 500 · <i class="fa-solid fa-image fa-sm"></i> 64×64 · <i class="fa-solid fa-shapes"></i> 200</li>
+                           <li>T2: <i class="fa-solid fa-play fa-rotate-270 fa-sm"></i> 2K · <i class="fa-solid fa-image fa-sm"></i> 128×128 · <i class="fa-solid fa-shapes"></i> 50 </li>
+                           <li>T3: <i class="fa-solid fa-play fa-rotate-270 fa-sm"></i> 10K · <i class="fa-solid fa-image fa-sm"></i> 256×256 · <i class="fa-solid fa-shapes"></i> 10</li>
+                           <li>T4: <i class="fa-solid fa-play fa-rotate-270 fa-sm"></i> 100K–150K · <i class="fa-solid fa-image fa-sm"></i> 1024×1024 · <i class="fa-solid fa-shapes"></i> 1</li>
+                           <li>T5 Solo: <i class="fa-solid fa-play fa-rotate-270 fa-sm"></i> 100K–150K · <i class="fa-solid fa-image fa-sm"></i> 2048×1024 · <i class="fa-solid fa-shapes"></i> 1</li>
+                        </ul>
+                     </details>
+                  </div>
+               </div>
+            </div>
+         </div>
+      </div>
+   </div>
+
+   <!-- BOTTOM BAR – Opens Object Library. -->
+   <div class="ui position-absolute bottom-0 w-100 user-select-none z-1 pe-none jsSceneEditor" style="display:none;">
+      <nav class="main navbar navbar-expand py-1 pe-none">
+            <ul class="d-flex justify-content-center w-50 mx-auto">
+               <button class="btn btn-sm btn-outline-secondary text-light bg-dark rounded-5 pe-auto" type="button" data-bs-toggle="offcanvas" data-bs-target="#objLibPanel" aria-controls="objLibPanel" data-bs-placement="top" title="Open Object Library" id="objLibToggle"><i class="fa-solid fa-shapes"></i> Objects</button>
+            </ul>
+      </nav>
+   </div>
+
+   <template id="tmpl_scene">
+      <li class="scene list-group-item list-group-item-action d-flex justify-content-between align-items-center jsSceneItem">
+         <span class="jsSceneItemName"></span>
+         <button class="del-btn btn btn-sm btn-outline-light p-1 py-0 border-0 w-auto jsDeleteScene" type="button" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Delete Scene"><i class="fa-solid fa-trash fa-sm opacity-75"></i></button>
+      </li>
+   </template>
+
+   <!--
+      OFFCANVAS PANELS – Slide-out panels.
+      sceneManagerPanel: Scene list, new scene, disconnect (Fabric).
+      codeEditorPanel: JSON scene editor – edit scene as code.
+      objLibPanel: Object Library – drag objects into scene.
+   -->
+   <div class="offcanvas offcanvas-start" tabindex="-1" id="sceneManagerPanel" aria-labeledby="sceneManagerPanelLabel">
+      <div class="offcanvas-header d-flex justify-content-between pb-0">
+         <h5 class="offcanvas-title pe-none text-uppercase fw-lighter" id="sceneManagerPanelLabel">Scene Assembler</h5>
+         <button type="button" class="btn-close p-1 rounded-2" data-bs-dismiss="offcanvas" aria-label="Close"><i class="fa-solid fa-arrow-right-from-bracket fa-lg fa-rotate-180"></i></button>
+      </div>
+      <div class="offcanvas-body d-flex flex-column gap-3">
+         <!-- New Scene -->
+         <button class="btn btn-light w-100 jsNewScene">
+            <i class="fa-solid fa-plus"></i> New Scene
+         </button>
+         <!-- Scene List -->
+         <ul class="scene-list list-group jsSceneList">
+         </ul>
+      </div>
+      <!-- Disconnect -->
+      <div class="offcanvas-footer p-3 pb-4 d-flex justify-content-between">
+         <button class="btn btn-outline-warning w-100 jsDisconnect" id="codeDisconnect" data-bs-dismiss="offcanvas" aria-label="Close">
+            <i class="fa-solid fa-plug-circle-xmark"></i> Disconnect from Fabric
+         </button>
+      </div>
+   </div>
+
+   <div class="offcanvas offcanvas-end mt-5 rounded-start-4 border-top bg-dark bg-opacity-75 blur z-1" data-bs-scroll="false" data-bs-backdrop="false" tabindex="-1" id="codeEditorPanel" aria-labelledby="codeEditorPanel">
+      <div class="offcanvas-resize-handle" id="codeEditorResizeHandle"></div>
+      <div class="offcanvas-header d-flex justify-content-between pb-0">
+         <h5 class="offcanvas-title m-0 p-0 user-select-none">Code Editor</h5>
+         <button type="button" class="btn-close p-1 rounded-2" data-bs-dismiss="offcanvas" aria-label="Close"><i class="fa-solid fa-arrow-right-from-bracket fa-lg"></i></button>
+      </div>
+      <div class="offcanvas-body pt-2 pb-1" id="code">
+         <div id="jsonEditor" class="h-100"></div>
+      </div>
+      <div class="offcanvas-footer p-3 pb-4 d-flex justify-content-between" id="jsonButtons">
+         <button type="button" class="btn btn-sm btn-primary fa-beat w-100" style="--fa-beat-scale: 1.025; --fa-animation-duration: 2s; display: none;" id="applyChanges"><i class="fa-solid fa-arrows-spin fa-spin"></i> Apply Changes</button>
+      </div>
+   </div>
+
+   <div class="offcanvas offcanvas-bottom rounded-top-4 border-start border-end bg-dark bg-opacity-75 blur mx-5 z-1" data-bs-scroll="true" data-bs-backdrop="false" tabindex="-1" id="objLibPanel" aria-labelledby="objLibPanel">
+      <div class="offcanvas-resize-handle-vertical" id="objLibResizeHandle"></div>
+      <div class="offcanvas-header d-flex justify-content-between py-2">
+         <h5 class="offcanvas-title m-0 p-0 user-select-none">Object Library</h5>
+         <button type="button" class="btn-close p-1 rounded-2" data-bs-dismiss="offcanvas" aria-label="Close"><i class="fa-solid fa-arrow-right-from-bracket fa-rotate-90 fa-lg"></i></button>
+      </div>
+      <div class="offcanvas-body py-2" id="objLibContent">
+         <div class="row g-3" id="objLibGrid">
+            <div class="col-12 text-center text-muted py-5">
+               <i class="fa-solid fa-spinner fa-spin fa-2x mb-3"></i>
+               <p class="mb-0">Loading objects...</p>
+            </div>
+         </div>
+      </div>
+   </div>
+
+   <!--
+      MODALS – confirmation dialogs.
+      deleteChangesModal: Confirm scene delete.
+      unsavedChangesModal: Apply or discard Code Editor changes before 3D edits.
+      Publishing overlay: Shown while publishing to Fabric.
+   -->
+   <div class="modal fade blur jsModalScene" id="deleteChangesModal" tabindex="-1" aria-labelledby="deleteChangesModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+         <div class="modal-content bg-dark text-light">
+            <div class="modal-header border-0 pb-1">
+               <h5 class="modal-title" id="deleteChangesModalLabel">
+                  <i class="fa-solid fa-triangle-exclamation me-2"></i>Delete scene?
+               </h5>
+               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+               <p>You are about to delete: <br><span class="fs-4 link-offset-2 text-decoration-underline link-underline-danger jsSceneName"></span></p>
+               <p class="mb-0 text-center"><strong>This action cannot be reverted. Are you sure?</strong></p>
+            </div>
+            <div class="modal-footer d-flex justify-content-between border-0">
+               <button type="button" class="btn btn-secondary rounded-5 jsDeleteCancel">
+                  <i class="fa-solid fa-eraser me-1"></i>Cancel
+               </button>
+               <button type="button" class="btn btn-danger rounded-5 jsDeleteOk">
+                  <i class="fa-solid fa-bomb  me-1"></i>Delete Scene
+               </button>
+            </div>
+         </div>
+      </div>
+   </div>
+
+   <div class="modal fade blur" id="unsavedChangesModal" tabindex="-1" aria-labelledby="unsavedChangesModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+         <div class="modal-content bg-dark text-light">
+            <div class="modal-header border-0 pb-1">
+               <h5 class="modal-title" id="unsavedChangesModalLabel">
+                  <i class="fa-solid fa-triangle-exclamation me-2"></i>Unsaved Code Changes
+               </h5>
+               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+               <p>You have unsaved code changes in the Code Editor. Please apply or discard your changes before making edits to the 3D scene.</p>
+               <p class="small text-muted">Discarding changes will simply revert the code changes you have made.</p>
+               <p class="mb-0 text-center"><strong>What would you like to do?</strong></p>
+            </div>
+            <div class="modal-footer d-flex justify-content-between border-0">
+               <button type="button" class="btn btn-secondary rounded-5" id="discardChangesFromModal">
+                  <i class="fa-solid fa-eraser me-1"></i>Discard Changes
+               </button>
+               <button type="button" class="btn btn-primary rounded-5" id="applyChangesFromModal">
+                  <i class="fa-solid fa-arrows-spin fa-spin me-1"></i>Apply Changes
+               </button>
+            </div>
+         </div>
+      </div>
+   </div>
+
+   <div class="vh-100 vw-100 bg-dark bg-opacity-50 blur position-relative z-3 jsUnsaved" style="display:none" tabindex="-1">
+      <div class="modal-body text-center d-flex flex-column h-100 justify-content-center align-items-center">
+         <i class="fa-solid fa-spinner fa-spin fa-3x mb-4 text-primary"></i>
+         <h5 class="modal-title mb-0" id="publishingModalLabel">Publishing Your Scene...</h5>
+         <p class="text-muted mt-3 mb-0">Please wait while your scene is saved.</p>
+      </div>
+   </div>
+
+   <!--
+      CODE EDITOR – CodeMirror 6 for JSON.
+      Scene is stored as JSON; edits here sync to 3D view when Apply Changes is clicked.
+      See sa-json-sync.js for sync logic; sa-json-lint.js for schema linting; sa-json-autocomplete.js for key hints.
+   -->
+   <script type="module">
+      import {
+         EditorView,
+         keymap,
+         lineNumbers,
+         highlightActiveLine,
+         drawSelection,
+         tooltips
+      } from 'https://esm.sh/@codemirror/view@6';
+      import {
+         EditorState
+      } from 'https://esm.sh/@codemirror/state@6';
+      import {
+         defaultHighlightStyle,
+         syntaxHighlighting,
+         foldGutter,
+         foldKeymap,
+         bracketMatching
+      } from 'https://esm.sh/@codemirror/language@6';
+      import {
+         json
+      } from 'https://esm.sh/@codemirror/lang-json@6';
+      import {
+         createSceneAssemblerLintSource
+      } from './js/sa-json-lint.js';
+      import {
+         sceneJsonAutocompleteFacet
+      } from './js/sa-json-autocomplete.js';
+      import {
+         defaultKeymap,
+         history,
+         historyKeymap,
+         undo,
+         redo
+      } from 'https://esm.sh/@codemirror/commands@6';
+      import {
+         searchKeymap,
+         highlightSelectionMatches
+      } from 'https://esm.sh/@codemirror/search@6';
+      import {
+         autocompletion,
+         closeBrackets,
+         closeBracketsKeymap,
+         completionKeymap
+      } from 'https://esm.sh/@codemirror/autocomplete@6';
+      import {
+         linter,
+         lintGutter
+      } from 'https://esm.sh/@codemirror/lint@6';
+      import {
+         oneDark
+      } from 'https://esm.sh/@codemirror/theme-one-dark@6';
+
+      const container = document.getElementById('jsonEditor');
+      let initialDoc = container?.dataset?.initial || container?.textContent || '';
+
+      // Clear any existing visible text to avoid duplicate rendering next to CodeMirror
+      if (container) container.textContent = '';
+
+      const editorRef = {};
+      const buildExtensions = () => [
+         EditorState.allowMultipleSelections.of(true),
+         // Host tooltips on body so autocomplete + completion info are not clipped by
+         // #jsonEditor overflow or the offcanvas .blur transform (fixed positioning).
+         tooltips({
+            parent: document.body,
+            position: 'fixed'
+         }),
+         oneDark,
+         lineNumbers(),
+         foldGutter(),
+         highlightActiveLine(),
+         drawSelection(),
+         bracketMatching(),
+         closeBrackets(),
+         autocompletion(),
+         sceneJsonAutocompleteFacet,
+         highlightSelectionMatches(),
+         lintGutter(),
+         linter(createSceneAssemblerLintSource()),
+         history(),
+         keymap.of([
+            ...defaultKeymap,
+            ...historyKeymap,
+            ...searchKeymap,
+            ...foldKeymap,
+            ...closeBracketsKeymap,
+            ...completionKeymap
+         ]),
+         syntaxHighlighting(defaultHighlightStyle, {
+            fallback: true
+         }),
+         json(),
+         EditorView.updateListener.of(
+            v => {
+               if (v.docChanged) {
+                  const value = v.state.doc.toString();
+                  container.dispatchEvent(new CustomEvent('json-change', {
+                     detail: {
+                        value
+                     }
+                  }));
+               }
+
+               if (v.focusChanged && editorRef.view?.hasFocus) {
+                  container.dispatchEvent(new Event('focus'));
+               }
+            }
+         )
+      ];
+
+      const view = new EditorView({
+         state: EditorState.create({
+            doc: initialDoc,
+            extensions: buildExtensions()
+         }),
+         parent: container
+      });
+      editorRef.view = view;
+
+      window.jsonEditorAPI = {
+         getValue() {
+            return view.state.doc.toString();
+         },
+         setValue(text) {
+            const curLen = view.state.doc.length;
+            view.dispatch({
+               changes: {
+                  from: 0,
+                  to: curLen,
+                  insert: text
+               }
+            });
+         },
+         focus() {
+            view.focus();
+         },
+         hasFocus() {
+            return view.hasFocus;
+         },
+         undo() {
+            undo({
+               state: view.state,
+               dispatch: view.dispatch
+            });
+         },
+         redo() {
+            redo({
+               state: view.state,
+               dispatch: view.dispatch
+            });
+         },
+         clearHistory() {
+            // Clear CodeMirror history by creating a new state with the same document
+            // but fresh history extension
+            const currentDoc = view.state.doc;
+            const newState = EditorState.create({
+               doc: currentDoc,
+               extensions: buildExtensions()
+            });
+            view.setState(newState);
+         }
+      };
+
+      // Clear the buffered initial data attribute once the editor is ready
+      if (container && container.dataset) delete container.dataset.initial;
+   </script>
+</body>
+
+<!--
+   Scene Assembler modules. **LOAD ORDER MATTERS**
+   Each file depends on the ones above it. See site/js/README.md for more.
+-->
+<!-- Config: Shared values (snap step, colors, human height) -->
+<script src="js/sa-config.js"></script>
+
+<!-- Scene Editor Core: 3D scene, camera, renderer, lights, grid, ruler, human guide -->
+<script src="js/sa-core.js"></script>
+
+<!-- Bootstrap: Connects HTML UI elements to the app; gets/sets JSON editor text; runs setup when page loads -->
+<script src="js/sa-bootstrap.js"></script>
+
+<!-- Models: Caches loaded 3D models; loads models from URLs -->
+<script src="js/sa-models.js"></script>
+
+<!-- Object Properties: Bounds, clamping, texture info; updates the properties panel -->
+<script src="js/sa-properties.js"></script>
+
+<!-- Transforms: Move/rotate/scale gizmo; box helpers; undo/redo; canvas size; transform events -->
+<script src="js/sa-transforms.js"></script>
+
+<!-- JSON sync: Keeps the code editor and 3D scene in sync; builds scene JSON; exports scene -->
+<script src="js/sa-json-sync.js"></script>
+
+<!-- Selection: Select objects from sidebar or 3d scene canvas; select all; deselect all -->
+<script src="js/sa-selection.js"></script>
+
+<!-- Groups: Group objects; ungroup; drag and drop to attach; duplicate; delete; EXPERIMENTAL -->
+<script src="js/sa-groups.js"></script>
+
+<!-- Objects Sidebar: Builds the object list; adds objects and groups to the list; inline rename -->
+<script src="js/sa-sidebar.js"></script>
+
+<!-- UI: Keyboard shortcuts; buttons; context menu; hover and click on canvas; render loop; camera helpers -->
+<script src="js/sa-ui.js"></script>
+
+<!-- Object library: Loads and shows the object library; preview thumbnails; add objects to scene -->
+<script src="js/sa-object-library.js"></script>
+
+<!-- Main: Loads and refreshes scenes; exposes functions for [rp1.js] -->
+<script src="js/sa-main.js"></script>
+
+<!-- Shell: Tooltips; code editor panel fade and resize; object library panel resize -->
+<script src="js/sa-shell.js"></script>
+
+<!-- Tutorial: Getting Started walkthrough using driver.js -->
+<script src="js/sa-tutorial.js"></script>
+
+</html>

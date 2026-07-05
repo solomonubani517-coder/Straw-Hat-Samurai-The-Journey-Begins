@@ -1,0 +1,705 @@
+/*
+** Copyright 2025 Metaversal Corporation.
+**
+** Licensed under the Apache License, Version 2.0 (the "License");
+** you may not use this file except in compliance with the License.
+** You may obtain a copy of the License at
+**
+**    https://www.apache.org/licenses/LICENSE-2.0
+**
+** Unless required by applicable law or agreed to in writing, software
+** distributed under the License is distributed on an "AS IS" BASIS,
+** WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+** See the License for the specific language governing permissions and
+** limitations under the License.
+**
+** SPDX-License-Identifier: Apache-2.0
+*/
+
+/* ==========================================================================
+   Base & Typography
+   ========================================================================== */
+
+body, .dropdown-item {
+  font-family: "Outfit", sans-serif !important;
+  font-optical-sizing: auto;
+  font-weight: 200;
+  font-style: normal;
+}
+
+.btn {
+  border-radius: 5rem;
+}
+
+.bg-none {
+  background: none !important;
+  background-color: none !important;
+  background-image: none !important;
+}
+
+#hotkeys kbd {
+  padding: 0.1rem 0.25rem;
+}
+
+/* ==========================================================================
+   Layout
+   ========================================================================== */
+
+.ui {
+  opacity: 1; /* always visible */
+}
+
+/* ==========================================================================
+   Offcanvas
+   ========================================================================== */
+
+@media (min-width: 992px) {
+  .offcanvas {
+    --bs-offcanvas-width: min(95vw, 480px);
+  }
+}
+
+.offcanvas .btn-close {
+  background-image: none !important;
+  padding: 0.25rem 1rem 0.75rem 0.5rem !important;
+  margin: 0rem !important;
+}
+
+/* Hide focus/active styling when focus is moved here by Bootstrap trap (e.g. after clicking in .ui) */
+.offcanvas .btn-close:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+  opacity: 0.5;
+  background-color: transparent;
+}
+
+/* Resize handle for code editor panel */
+.offcanvas-resize-handle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  height: 97%;
+  margin: auto;
+  cursor: ew-resize;
+  z-index: 1056;
+  background: transparent;
+  transition: background 0.2s ease;
+  -webkit-transition: background 0.2s ease;
+  display: none;
+}
+
+.offcanvas.show .offcanvas-resize-handle {
+  display: block;
+}
+
+.offcanvas-resize-handle:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.offcanvas-resize-handle:active {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Resize handle for object library panel (vertical) */
+.offcanvas-resize-handle-vertical {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  width: 97%;
+  margin: auto;
+  cursor: ns-resize;
+  z-index: 1056;
+  background: transparent;
+  transition: background 0.2s ease;
+  -webkit-transition: background 0.2s ease;
+  display: none;
+}
+
+.offcanvas.show .offcanvas-resize-handle-vertical {
+  display: block;
+}
+
+.offcanvas-resize-handle-vertical:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.offcanvas-resize-handle-vertical:active {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* ==========================================================================
+   Canvas / 3D Viewport
+   ========================================================================== */
+
+canvas {
+  opacity: 0;
+  filter: blur(1rem);
+  -webkit-filter: blur(1rem);
+  animation: fadeInBlur 1s ease forwards;
+  -webkit-animation: fadeInBlur 1s ease forwards;
+  animation-delay: 1s;
+}
+
+/* ==========================================================================
+   Animations
+   ========================================================================== */
+
+@keyframes fadeInBlur {
+  from {
+    opacity: 0;
+    filter: blur(1rem);
+    -webkit-filter: blur(1rem);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0rem);
+    -webkit-filter: blur(0rem);
+  }
+}
+
+@-webkit-keyframes fadeInBlur {
+  from {
+    opacity: 0;
+    filter: blur(1rem);
+    -webkit-filter: blur(1rem);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0rem);
+    -webkit-filter: blur(0rem);
+  }
+}
+
+.login-modal, .ui .blur, .ui #codeToggle, .ui #objLibToggle {
+  animation: fadeIn 750ms ease forwards;
+  -webkit-animation: fadeIn 750ms ease forwards;
+  animation-delay: 500ms;
+  opacity: 0;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@-webkit-keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ==========================================================================
+   Blur / Glass Effect
+   ========================================================================== */
+
+.blur {
+  backdrop-filter: saturate(180%) blur(1rem);
+  -webkit-backdrop-filter: saturate(180%) blur(1rem);
+  isolation: isolate;
+  position: relative;
+  will-change: backdrop-filter;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+/* ==========================================================================
+   Code Editor
+   ========================================================================== */
+
+#jsonEditor {
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  color: #ffffff;
+  border: 1px solid #555;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  resize: vertical;
+  white-space: pre;
+  /* Scrolling lives on .cm-scroller; visible here avoids clipping in-editor UI. */
+  overflow: hidden;
+}
+
+.cm-editor {
+  height: 100%;
+  background: #22222290;
+}
+
+/* CodeMirror tooltips (autocomplete list + completion info) use parent: document.body — keep above offcanvas/modals */
+.cm-tooltip {
+  z-index: 2000;
+}
+
+/* Match #jsonEditor (11px); portaled to body they no longer inherit that size. */
+.cm-tooltip.cm-tooltip-autocomplete {
+  max-height: min(50vh, 280px);
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.cm-tooltip .cm-completionInfo,
+.cm-tooltip.cm-completionInfo {
+  max-width: min(22rem, calc(100vw - 2rem));
+  max-height: min(50vh, 18rem);
+  overflow-y: auto;
+  overflow-x: hidden;
+  white-space: normal;
+  box-sizing: border-box;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  padding: 4px 8px;
+}
+
+/*
+ * Lint diagnostics: the tooltip root IS the ul (both .cm-tooltip and .cm-tooltip-lint on one node),
+ * so descendant selectors like .cm-tooltip .cm-tooltip-lint never matched.
+ */
+.cm-tooltip.cm-tooltip-lint {
+  max-width: min(22rem, calc(100vw - 2rem));
+  box-sizing: border-box;
+  margin: 0;
+  padding: 4px 8px;
+  list-style: none;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.cm-tooltip.cm-tooltip-lint .cm-diagnostic {
+  max-width: 100%;
+}
+
+.cm-tooltip.cm-tooltip-lint .cm-diagnosticText {
+  display: block;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+#codeToggle {
+  transition: opacity 0.15s ease-in-out;
+  -webkit-transition: opacity 0.15s ease-in-out;
+}
+
+/* ==========================================================================
+   Object Sidebar List / Outliner
+   ========================================================================== */
+
+#modelList {
+  list-style: none;
+  padding: 0;
+  margin: 0px 0 0 0;
+  min-height: 35vh;
+  max-height: 65vh;
+  overflow: scroll;
+  -webkit-overflow-scrolling: touch;
+}
+
+#modelList li {
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+#modelList li.selected {
+  background: #444;
+}
+
+#modelsPanel::before {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2rem;
+  min-height: 2rem;
+  border-radius: 5rem;
+  background: -webkit-linear-gradient(0deg, rgba(33, 37, 41, 1) 0%, rgba(33, 37, 41, 0) 100%);
+  background: linear-gradient(0deg, rgba(33, 37, 41, 1) 0%, rgba(33, 37, 41, 0) 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Caret (disclosure) for groups */
+.caret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  margin-right: 6px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.caret::before {
+  content: "\25B6"; /* ▶ */
+  font-size: 10px;
+  line-height: 1;
+  color: #ccc;
+  transition: transform 0.12s ease;
+  -webkit-transition: -webkit-transform 0.12s ease;
+}
+
+.caret.expanded::before {
+  transform: rotate(90deg);
+  -webkit-transform: rotate(90deg);
+}
+
+.children-collapsed {
+  display: none;
+}
+
+/* Drag and drop styles */
+#modelList li.dragging {
+  opacity: 0.5;
+  background: #333;
+  border-left: 3px solid #99ccff;
+}
+
+#modelList li.drag-over {
+  background: #555;
+  border: 2px dashed #99ccff;
+  border-radius: 3px;
+}
+
+#modelList li[draggable="true"]:hover {
+  background: #444;
+  cursor: grab;
+  cursor: -webkit-grab;
+}
+
+#modelList li[draggable="true"]:active {
+  cursor: grabbing;
+  cursor: -webkit-grabbing;
+}
+
+/* Multi-select drag feedback */
+#modelList li.dragging.multi-select {
+  border-left: 3px solid #ffcc00;
+  background: #444;
+}
+
+/* ==========================================================================
+   Properties Panel
+   ========================================================================== */
+
+#properties {
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+/* ==========================================================================
+   Context Menu
+   ========================================================================== */
+
+#contextMenu {
+  position: absolute;
+  display: none;
+  background: #11111190;
+  border: 1px solid #555;
+  border-radius: 0.5rem;
+  padding: 4px;
+  list-style: none;
+  z-index: 1000;
+  backdrop-filter: blur(1rem);
+  -webkit-backdrop-filter: blur(1rem);
+}
+
+/* ==========================================================================
+   Object Library
+   ========================================================================== */
+
+#objLibToggle {
+  transition: opacity 0.15s ease-in-out;
+  -webkit-transition: opacity 0.15s ease-in-out;
+}
+
+#objLibGrid .card {
+  overflow: hidden;
+}
+
+#objLibGrid .card-img-top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#objLibGrid .card-img-top canvas {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain;
+  -webkit-object-fit: contain;
+  animation: fadeInBlur 0.5s ease forwards;
+  -webkit-animation: fadeInBlur 0.5s ease forwards;
+}
+
+#objLibContent {
+  max-height: 70vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ==========================================================================
+   Scene Manager
+   ========================================================================== */
+
+#sceneManagerPanel .scene-list > .scene:not(.active) > .del-btn {
+  display: none;
+}
+
+#sceneManagerPanel .scene-list > .scene {
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   Stats Viewer (Triangle & Texture)
+   ========================================================================== */
+
+/* Triangle & scene checker (stat-viewer) */
+#triStats .stat-viewer summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+#triStats .stat-viewer summary::-webkit-details-marker {
+  display: none;
+}
+
+#triStats .stat-viewer summary::before {
+  content: "\25B6\00a0";
+  font-size: 0.65rem;
+  color: var(--bs-secondary);
+}
+
+#triStats .stat-viewer details[open] summary::before {
+  transform: rotate(90deg);
+  -webkit-transform: rotate(90deg);
+  display: inline-block;
+}
+
+#triStats .tri-gauge .progress-bar {
+  transition: width 0.2s ease;
+  -webkit-transition: width 0.2s ease;
+}
+
+/* Shared: user-friendly analyzer layout (new to advanced) */
+.stat-viewer .stat-viewer-lead {
+  color: var(--bs-body-color);
+  line-height: 1.4;
+}
+
+.stat-viewer .stat-viewer-status {
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-viewer .stat-viewer-details summary {
+  margin-bottom: 0.25rem;
+}
+
+/* Texture & tier checker (stat-viewer) */
+#texStats .stat-viewer summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+#texStats .stat-viewer summary::-webkit-details-marker {
+  display: none;
+}
+
+#texStats .stat-viewer summary::before {
+  content: "\25B6\00a0";
+  font-size: 0.65rem;
+  color: var(--bs-secondary);
+}
+
+#texStats .stat-viewer details[open] summary::before {
+  transform: rotate(90deg);
+  -webkit-transform: rotate(90deg);
+  display: inline-block;
+}
+
+#texStats .tex-gauge .progress-bar {
+  transition: width 0.2s ease;
+  -webkit-transition: width 0.2s ease;
+}
+
+/* ==========================================================================
+   Driver.js tutorial popover – typography
+   ========================================================================== */
+
+.driver-popover,
+.driver-popover *:not(i):not(.fa-solid) {
+  font-family: "Outfit", sans-serif !important;
+}
+
+.driver-popover-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+}
+
+.driver-popover-description {
+  font-size: 0.9rem;
+  font-weight: 400;
+  line-height: 1.6;
+  letter-spacing: 0.01em;
+}
+
+.driver-popover-description kbd {
+  font-family: "Outfit", ui-monospace, monospace;
+  font-size: 0.8em;
+  padding: 0.1em 0.35em;
+  border-radius: 0.25rem;
+}
+
+.driver-popover-progress-text {
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.driver-popover-footer button {
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+/* Animated gradient border – minimal overrides to avoid breaking driver.js layout */
+.driver-popover {
+  background: transparent !important;
+}
+
+.driver-popover::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 7px;
+  background: linear-gradient(90deg, #c0392b, #b7950b, #1a5276, #7d3c98, #1a5276, #c0392b);
+  background-size: 300% 100%;
+  animation: driver-popover-gradient 3s linear infinite;
+  z-index: -2;
+  pointer-events: none;
+}
+
+.driver-popover::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: 7px;
+  background: #fff;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.driver-popover-arrow {
+  border-width: 14px !important;
+}
+
+.driver-popover-arrow-side-top {
+  transform: translateY(-4px);
+}
+
+.driver-popover-arrow-side-bottom {
+  transform: translateY(4px);
+}
+
+.driver-popover-arrow-side-left {
+  transform: translateX(-4px);
+}
+
+.driver-popover-arrow-side-right {
+  transform: translateX(4px);
+}
+
+@keyframes driver-popover-gradient {
+  to {
+    background-position: 300% 0;
+  }
+}
+
+/* Start Tutorial button – same animated gradient border as driver-popover */
+#startTutorial {
+  position: relative;
+  background: transparent !important;
+}
+
+#startTutorial::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 7px;
+  background: linear-gradient(90deg, #c0392b, #b7950b, #1a5276, #7d3c98, #1a5276, #c0392b);
+  background-size: 300% 100%;
+  animation: driver-popover-gradient 3s linear infinite;
+  z-index: -2;
+  pointer-events: none;
+}
+
+#startTutorial::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: 5px;
+  background: #f8f9fa;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.driver-overlay path {
+  fill: rgba(0, 0, 0, 0.85) !important;
+  opacity: 1 !important;
+}
+
+/* ==========================================================================
+   Tutorial – blur UI on viewport step, disable pointer events
+   ========================================================================== */
+
+body.sa-tutorial-active .ui {
+  pointer-events: none !important;
+}
+
+/* Offcanvas panels during their tutorial step – disable all interaction */
+.sa-tutorial-offcanvas-view,
+.sa-tutorial-offcanvas-view * {
+  pointer-events: none !important;
+}
+
+body.sa-tutorial-context-menu-step #modelsPanel {
+  pointer-events: auto !important;
+}
+
+body.sa-tutorial-context-menu-step #objLibToggle {
+  pointer-events: none !important;
+}
+
+/* Force context menu tutorial popover to top center of viewport */
+.sa-tutorial-context-menu-popover {
+  position: fixed !important;
+  top: 50px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  bottom: auto !important;
+}
+
+body.sa-tutorial-viewport-step .ui {
+  filter: blur(6px);
+  opacity: 0.85;
+  transition: filter 0.3s ease, opacity 0.3s ease;
+}

@@ -1,0 +1,47 @@
+{
+   "MVSF": {
+      "IO": {
+         "_comment2": "Required for internal use.",
+
+         "bGlobalNotify": true
+      },
+
+      "LAN": {
+         "_comment3": "port - The internal port the service is listening on",
+
+         "port": "<PORT>",
+         "SSL": {
+            "_comment1_1": "bUseSSL - Boolean value that enable/disables SSL. NOTE: Set to false ONLY if testing using localhost",
+
+            "bUseSSL":  true
+         }
+      },
+
+      "WAN": {
+         "_comment4_1": "host - The public hostname of your server",
+         "_comment4_2": "port - The public port mapped to your service. Frequently this is the same as your LAN port",
+
+         "host": "<RAILWAY_PUBLIC_DOMAIN>",
+         "port": "443"
+      },
+
+      "_comment5_1": "key - Admin Key to allow user to modify the Map",
+      "_comment5_3": "sCompanyId - Your RP1 CompanyID",
+
+      "key":         "<MVSADMINKEY>",
+      "sCompanyId":  "<MYCOMPANYID>"
+   },
+
+   "SQL": {
+      "type": "MYSQL",
+      "config": {
+         "connectionLimit":  10,
+         "host":             "<MYSQLHOST>",
+         "port":             "<MYSQLPORT>",
+         "user":             "<MYSQLUSER>",
+         "password":         "<MYSQLPASSWORD>",
+         "database":         "<MYSQLDATABASE>",
+         "multipleStatements": true
+      }
+   }
+}
